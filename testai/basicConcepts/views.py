@@ -3,4 +3,9 @@ from django.http import HttpResponse
 
 # Create your views here.
 def Welcome(request):
-    return HttpResponse('<h1>hello world</h1>')
+    return render(request, 'index.html')
+
+def User(request):
+    username = request.GET['username']
+    print(username)
+    return render(request, 'user.html', {'name':username})
