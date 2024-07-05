@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Face Recognition</title>
+    <style>
+        #video-container {
+            width: 640px;
+            height: 480px;
+            border: 2px solid #000;
+            margin: 20px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #snapButton {
+            display: block;
+            margin: 10px auto;
+        }
+        #canvas {
+            display: none;
+        }
+        .gender-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 5px;
+            font-size: 14px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Face Recognition</h1>
+    <div id="video-container">
+        <video id="video" autoplay></video>
+        <div id="genderLabel" class="gender-label"></div>
+    </div>
+    <button id="snapButton">Snap</button>
+    <canvas id="canvas" width="640" height="480"></canvas>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            var video = document.getElementById('video');
+            var canvas = document.getElementById('canvas');
+            var context = canvas.getContext('2d');
+            var snapButton = document.getElementById('snapButton');
+            var genderLabel = document.getElementById('genderLabel');
+           
+            // Get user media (webcam) and display it in the video element
+            if (navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(function(stream) {
+                        video.srcObject = stream;
+                    })
+                    .catch(function(error) {
+                        console.log('Error accessing webcam: ' + error.message);
+                    });
+            }
+            
+            // Event listener for the Snap button
+            snapButton.addEventListener('click', function() {
+                // Draw the current video frame on the canvas
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Convert the canvas image to base64 data
+                var imageBase64 = canvas.toDataURL('image/png');
+                
+                // Send the image data to the Django server
+                $.ajax({
+                    type: 'POST',
+                    url: '/save_photo/',
+                    data: {
+                        image_data: imageBase64
+                    },
+                    success: function() {
+                        console.log('Image saved!');
+                        
+                        // Run gender detection
+                        runGenderDetection(imageBase64);
+                    },
+                    error: function() {
+                        console.log('Error saving image!');
+                    }
+                });
+            });
+            
+            function runGenderDetection(imageData) {
+                // Send the image data to the gender detection endpoint
+                $.ajax({
+                    type: 'POST',
+                    url: '/detect_gender/',
+                    data: {
+                        image_data: imageData
+                    },
+                    success: function(response) {
+                        // Display the detected gender on the page
+                        genderLabel.innerText = 'Gender: ' + response.gender;
+                    },
+                    error: function() {
+                        console.log('Error detecting gender!');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
